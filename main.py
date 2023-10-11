@@ -2,6 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 
 import functions
+from minecraft_server import MinecraftServer
 
 app = FastAPI()
 
@@ -29,4 +30,5 @@ async def status_server(server_name: str):
 
 
 if __name__ == '__main__':
+    MinecraftServer('1.20.2').start()
     uvicorn.run(app, host='')
