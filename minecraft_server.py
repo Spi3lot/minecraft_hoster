@@ -57,8 +57,8 @@ class MinecraftServer:
 
     def restart(self):
         self.enter_directory()
-        self.__stop()
-        self.__start()
+        self.__stop(wait=True)
+        self.__start(wait=False)
         MinecraftServer.exit_directory()
 
     def get_status(self):
