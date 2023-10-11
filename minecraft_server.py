@@ -3,24 +3,28 @@ import subprocess
 
 
 class MinecraftServer:
+    INSTANCES = {}
     FOLDER_PATH = './Minecraft'
-    name: str
-    process: subprocess.Popen
 
-    def __init__(self, name):
+    name: str
+    process: subprocess.Popen = None
+
+    def __init__(self, name, store_instance=True):
         self.name = name
 
-    def get_path(self):
-        return f'{MinecraftServer.FOLDER_PATH}/{self.name}'
+        if store_instance:
+            MinecraftServer.INSTANCES[name] = self
 
-    def get_jar_path(self):
-        return f'{self.get_path()}/server.jar'
+    def __str__(self):
+        return f'MinecraftServer(name={self.name}, process={self.process})'
 
-    def get_properties_path(self):
-        return f'{self.get_path()}/server.properties'
+    def __repr__(self):
+        return str(self)
 
-    def enter_directory(self):
-        os.chdir(self.get_path())
+    @staticmethod
+    def of(name):
+        instance = MinecraftServer.INSTANCES.get(name)
+        return instance if instance is not None else MinecraftServer(name)
 
     @staticmethod
     def exit_directory():
@@ -37,6 +41,18 @@ class MinecraftServer:
     @staticmethod
     def __stop(wait: bool):
         return MinecraftServer.__subprocess_method(wait)(['java', '-jar', 'server.jar', 'stop'])
+
+    def get_path(self):
+        return f'{MinecraftServer.FOLDER_PATH}/{self.name}'
+
+    def get_jar_path(self):
+        return f'{self.get_path()}/server.jar'
+
+    def get_properties_path(self):
+        return f'{self.get_path()}/server.properties'
+
+    def enter_directory(self):
+        os.chdir(self.get_path())
 
     def start(self):
         self.enter_directory()

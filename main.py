@@ -30,5 +30,4 @@ async def status_server(server_name: str):
 
 
 if __name__ == '__main__':
-    MinecraftServer('1.20.2').start()
     uvicorn.run(app, host='')
