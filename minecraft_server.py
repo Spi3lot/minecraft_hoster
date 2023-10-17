@@ -5,9 +5,10 @@ import subprocess
 class MinecraftServer:
     INSTANCES = {}
     FOLDER_PATH = './Minecraft'
+    NOT_FOUND_MESSAGE = 'No server found with given name'
 
     name: str
-    process: subprocess.Popen = None
+    process: subprocess.Popen | None = None
 
     def __init__(self, name, store_instance=True):
         self.name = name
@@ -21,26 +22,27 @@ class MinecraftServer:
     def __repr__(self):
         return str(self)
 
-    @staticmethod
-    def of(name):
-        instance = MinecraftServer.INSTANCES.get(name)
-        return instance if instance is not None else MinecraftServer(name)
+    @classmethod
+    def of(cls, name):
+        instance = cls.INSTANCES.get(name)
+        return instance if instance is not None else cls(name)
 
-    @staticmethod
-    def exit_directory():
-        os.chdir('../..')
+    @classmethod
+    def __start(cls, wait: bool):
+        return cls.__subprocess_method(wait)(['java', '-jar', 'server.jar', 'nogui'])
+
+    def __stop(self):
+        if self.process is not None:
+            self.process.terminate()
+            self.process = None
 
     @staticmethod
     def __subprocess_method(wait: bool):
         return subprocess.run if wait else subprocess.Popen
 
     @staticmethod
-    def __start(wait: bool):
-        return MinecraftServer.__subprocess_method(wait)(['java', '-jar', 'server.jar', 'nogui'])
-
-    @staticmethod
-    def __stop(wait: bool):
-        return MinecraftServer.__subprocess_method(wait)(['java', '-jar', 'server.jar', 'stop'])
+    def exit_directory():
+        os.chdir('../..')
 
     def get_path(self):
         return f'{MinecraftServer.FOLDER_PATH}/{self.name}'
@@ -51,11 +53,19 @@ class MinecraftServer:
     def get_properties_path(self):
         return f'{self.get_path()}/server.properties'
 
-    def enter_directory(self):
-        os.chdir(self.get_path())
+    def exists(self) -> bool:
+        return os.path.exists(self.get_path())
 
-    def start(self):
-        self.enter_directory()
+    def enter_directory(self) -> bool:
+        if not self.exists():
+            return False
+
+        os.chdir(self.get_path())
+        return True
+
+    def start(self) -> bool:
+        if not self.enter_directory():
+            return False
 
         if not os.path.exists('eula.txt'):
             self.__start(wait=True)
@@ -65,22 +75,26 @@ class MinecraftServer:
 
         self.process = self.__start(wait=False)
         MinecraftServer.exit_directory()
+        return True
 
-    def stop(self):
-        self.enter_directory()
-        self.__stop(wait=False)
-        MinecraftServer.exit_directory()
+    def stop(self) -> bool:
+        if not self.exists():
+            return False
 
-    def restart(self):
-        self.enter_directory()
-        self.__stop(wait=True)
+        self.__stop()
+        return True
+
+    def restart(self) -> bool:
+        if not self.enter_directory():
+            return False
+
+        self.__stop()
         self.__start(wait=False)
         MinecraftServer.exit_directory()
+        return True
 
-    def get_status(self):
-        self.enter_directory()
-        status = subprocess.Popen(['java', '-jar', 'server.jar', 'status'],
-                                  stdout=subprocess.PIPE).stdout.read().decode('utf-8')
+    def get_status(self) -> str:
+        if not self.exists():
+            return MinecraftServer.NOT_FOUND_MESSAGE
 
-        MinecraftServer.exit_directory()
-        return status
+        return 'Running' if self.process is not None else 'Not running'
